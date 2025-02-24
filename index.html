@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbox Tư Vấn</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+
+</head>
+<body>
+
+    <div class="chat-icon" onclick="toggleChat()">
+        <img src="https://static.vecteezy.com/system/resources/previews/021/495/949/original/messenger-logo-icon-free-png.png" alt="Chat">
+    </div>
+
+
+    <div class="chatbox" id="chatbox">
+        <div class="chat-header" onclick="toggleChat()">Chat với chúng tôi</div>
+        <div class="chat-body" id="chat-body"></div>
+        
+        <!-- Hộp nhập tin nhắn -->
+        <div class="chat-input-container">
+            <input type="text" id="chat-input" class="chat-input" placeholder="Nhập tin nhắn..." oninput="showSuggestions()" onkeypress="handleUserMessage(event)">
+            <button class="send-button" onclick="sendMessage()">
+                <i class="fa-solid fa-paper-plane"></i>
+            </button>
+        </div>
+        
+        <!-- Hộp hiển thị gợi ý -->
+        <div id="suggestions-box" class="suggestions-box"></div>
+    </div>
+    
+
+    <script>
+        let productList = [];
+
+        // Load danh sách sản phẩm từ API
+        async function loadProducts() {
+            try {
+                let response = await fetch("http://localhost:3000/api/products");
+                productList = await response.json();
+            } catch (error) {
+                console.error("Lỗi tải sản phẩm:", error);
+            }
+        }
+
+        // Xử lý tin nhắn của người dùng
+        function handleUserMessage(event) {
+            if (event.key === "Enter") {
+                let inputField = document.getElementById("chat-input");
+                let userMessage = inputField.value.trim();
+                if (userMessage !== "") {
+                    addMessage("Bạn", userMessage, "user");
+                    processUserMessage(userMessage);
+                    inputField.value = "";
+                }
+            }
+        }
+
+        // Hiển thị tin nhắn trên chatbox
+        function addMessage(sender, message, type = "bot") {
+    let chatBody = document.getElementById("chat-body");
+    let messageElement = document.createElement("div");
+    
+    messageElement.classList.add("message");
+
+    if (type === "user") {
+        messageElement.innerHTML = `<div class="user-message">${message}</div>`;
+    } else {
+        messageElement.innerHTML = `<div class="bot-message"><strong>${sender}:</strong> ${message}</div>`;
+    }
+
+    chatBody.appendChild(messageElement);
+    chatBody.scrollTop = chatBody.scrollHeight;
+}
+
+
+
+        function processUserMessage(userMessage) {
+    userMessage = userMessage.toLowerCase();
+
+    // Chào hỏi
+    if (userMessage.includes("hello") || userMessage.includes("chào")) {
+        addMessage("Chatbot", "Xin chào! Tôi có thể giúp gì cho bạn?");
+        return;
+    }
+
+    // Cảm ơn
+    if (userMessage.includes("cảm ơn") || userMessage.includes("thanks")) {
+        addMessage("Chatbot", "Không có gì! Nếu bạn cần hỗ trợ, cứ hỏi nhé.");
+        return;
+    }
+
+    // Tìm kiếm sản phẩm
+    let foundProducts = productList.filter(product =>
+        product.name.toLowerCase().includes(userMessage)
+    );
+
+    if (foundProducts.length > 0) {
+        let response = "🔍 Tôi đã tìm thấy một số sản phẩm phù hợp:<br><br>";
+        foundProducts.forEach(product => {
+            response += `
+                <div class="product" id="product-${product._id}">
+                    <b>🌟 ${product.name}</b>
+                    <button onclick="toggleProductDetails('${product._id}')">Xem chi tiết</button>
+                    <div class="product-details" id="details-${product._id}" style="display: none;">
+                        💰 Giá: ${product.price} VND<br>
+                        🔥 Giá KM: ${product.promotionPrice} VND<br>
+                        📝 ${product.description}<br>
+                        📦 Số lượng: ${product.quantityInStock}<br>
+                        <img src="http://localhost:3000/images/${product.image}" width="150">
+                    </div>
+                </div>
+                <hr>
+            `;
+        });
+        addMessage("Chatbot", response);
+    } else {
+        addMessage("Chatbot", "❌ Xin lỗi, tôi không tìm thấy sản phẩm phù hợp.");
+    }
+}
+
+
+        // Xem chi tiết sản phẩm
+        function viewProduct(productId) {
+            let product = productList.find(p => p._id === productId);
+            if (product) {
+                let detail = `
+                    <b>🔍 Chi tiết sản phẩm:</b><br>
+                    🌟 <b>${product.name}</b><br>
+                    💰 Giá: ${product.price} VND<br>
+                    🔥 Giá KM: ${product.promotionPrice} VND<br>
+                    📝 ${product.description}<br>
+                    📦 Số lượng: ${product.quantityInStock}<br>
+                    <img src="http://localhost:3000/images/${product.image}" width="150">
+                `;
+                addMessage("Chatbot", detail);
+            }
+        }
+
+        // Ẩn / Hiện chatbox
+        function toggleChat() {
+            let chatbox = document.getElementById("chatbox");
+            let chatIcon = document.querySelector(".chat-icon");
+            chatbox.style.display = chatbox.style.display === "block" ? "none" : "block";
+            chatIcon.style.display = chatbox.style.display === "block" ? "none" : "flex";
+        }
+
+        function toggleProductDetails(productId) {
+         let detailsDiv = document.getElementById(`details-${productId}`);
+        if (detailsDiv.style.display === "none") {
+            detailsDiv.style.display = "block";
+        } else {
+        detailsDiv.style.display = "none";
+    }
+}
+
+
+        loadProducts();
+
+        // Gợi ý chat
+        function showSuggestions() {
+    let input = document.getElementById("chat-input").value.toLowerCase();
+    let suggestionsBox = document.getElementById("suggestions-box");
+
+    if (input.length < 2) {
+        suggestionsBox.style.display = "none"; // Ẩn nếu nhập quá ít ký tự
+        return;
+    }
+
+    // Lọc danh sách sản phẩm theo ký tự nhập vào
+    let suggestions = productList.filter(product =>
+        product.name.toLowerCase().includes(input)
+    );
+
+    // Hiển thị danh sách gợi ý
+    if (suggestions.length > 0) {
+        let suggestionHTML = suggestions.map(product =>
+            `<div class="suggestion-item" onclick="selectSuggestion('${product.name}')">${product.name}</div>`
+        ).join("");
+        suggestionsBox.innerHTML = suggestionHTML;
+        suggestionsBox.style.display = "block";
+    } else {
+        suggestionsBox.style.display = "none";
+    }
+}
+
+// Khi nhấn vào gợi ý, điền vào ô nhập và gửi tin nhắn
+function selectSuggestion(productName) {
+    document.getElementById("chat-input").value = productName;
+    document.getElementById("suggestions-box").style.display = "none"; // Ẩn gợi ý
+}
+
+// Khi người dùng gửi tin nhắn
+function sendMessage() {
+    let inputField = document.getElementById("chat-input");
+    let userMessage = inputField.value.trim();
+    
+    if (userMessage !== "") {
+        addMessage("Bạn", userMessage, "user");
+        processUserMessage(userMessage);
+        inputField.value = "";
+        document.getElementById("suggestions-box").style.display = "none"; // Ẩn gợi ý khi gửi tin nhắn
+    }
+}
+
+    </script>
+
+</body>
+</html>
